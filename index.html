@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Выбор опций</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --card: #181818;
+            --text: #eaeaea;
+            --muted: #9aa0a6;
+            --accent: #3ea6ff;
+            --radius: 16px;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .wrap {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, .2);
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search {
+            flex: 1 1 320px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            background: #121212;
+            color: var(--text);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button,
+        .btn {
+            cursor: pointer;
+            border: 1px solid #2a2a2a;
+            background: #121212;
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: #081018;
+            border-color: transparent;
+        }
+
+        .list {
+            margin-top: 16px;
+        }
+
+        .item {
+            display: grid;
+            grid-template-columns: 24px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+        }
+
+        .item:hover {
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .pill {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .empty {
+            color: var(--muted);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .sticky {
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(6px);
+            background: rgba(24, 24, 24, .9);
+            padding: 8px 12px;
+            border-radius: 12px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card sticky">
+            <div class="row">
+                <div class="search"><input id="q" type="text" placeholder="Поиск… (фильтрация по названию)" /></div>
+                <div class="toolbar">
+                    <button id="selectAll">Выбрать всё (видимое)</button>
+                    <button id="clearAll">Снять всё</button>
+                    <span id="counter" class="pill">Выбрано: 0</span>
+                </div>
+            </div>
+            <div class="hint">Отметьте нужные пункты и нажмите «Отправить» внизу экрана (Main Button Telegram).</div>
+        </div>
+
+        <div id="list" class="list card"></div>
+
+        <div class="card" style="margin-top:16px">
+            <div class="hint">Поддерживается 100+ пунктов. Производительность обеспечивается за счёт простой разметки и
+                фильтрации на клиенте.</div>
+        </div>
+    </div>
+
+    <script>
+        // ========= УТИЛИТЫ =========
+        const tg = window.Telegram?.WebApp;
+        tg?.expand();
+
+        const applyTheme = () => {
+            if (!tg) return;
+            const p = tg.themeParams || {};
+            document.documentElement.style.setProperty('--bg', p.bg_color || '#0f0f0f');
+            document.documentElement.style.setProperty('--card', p.secondary_bg_color || '#181818');
+            document.documentElement.style.setProperty('--text', p.text_color || '#eaeaea');
+            document.documentElement.style.setProperty('--muted', p.hint_color || '#9aa0a6');
+            document.documentElement.style.setProperty('--accent', p.button_color || '#3ea6ff');
+        };
+        applyTheme();
+        tg?.onEvent('themeChanged', applyTheme);
+
+        function getParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+        function parseCSV(str) {
+            if (!str) return [];
+            return str.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        function parseB64JsonArray(b64) {
+            if (!b64) return [];
+            try {
+                const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+                const arr = JSON.parse(json);
+                return Array.isArray(arr) ? arr : [];
+            } catch { return []; }
+        }
+
+        // ========= ДАННЫЕ: динамически из URL =========
+        // Поддерживаем два способа прокидывания списка производителей:
+        // 1) creators_b64=base64(JSON["SEBERO","DARKSIDE",...]) — РЕКОМЕНДОВАНО
+        // 2) creators=SEBERO,DARKSIDE,... — fallback
+        const creatorsFromB64 = parseB64JsonArray(getParam('creators_b64'));
+        const creatorsFromCSV = parseCSV(getParam('creators'));
+        const CREATORS = (creatorsFromB64.length ? creatorsFromB64 : creatorsFromCSV).map(x => String(x)).filter(Boolean);
+
+        // Если ничего не передали — используем простой дефолт, чтобы страница жила сама по себе
+        const DEFAULT_CREATORS = [
+            'SEBERO', 'DARKSIDE', 'ELEMENT', 'DUFT', 'Satyr', 'Sarma 360'
+        ];
+        const SOURCE_CREATORS = CREATORS.length ? CREATORS : DEFAULT_CREATORS;
+
+        // Собираем OPTIONS c id по порядку
+        const OPTIONS = SOURCE_CREATORS.map((name, idx) => ({ id: idx + 1, name }));
+
+        // ========= СОСТОЯНИЕ =========
+        const state = { query: '', selected: new Set() };
+
+        const listEl = document.getElementById('list');
+        const qEl = document.getElementById('q');
+        const counterEl = document.getElementById('counter');
+
+        // Инициализация выделения с учётом исключений
+        function initSelectionWithExclusions() {
+            // По умолчанию выделено ВСЁ
+            OPTIONS.forEach(o => state.selected.add(o.id));
+
+            // Исключения можно передать в двух форматах:
+            // 1) excl_b64=base64(JSON["Brand A","Brand B"]) — РЕКОМЕНДОВАНО
+            // 2) excl=Brand A,Brand B — fallback
+            const exclNames = parseB64JsonArray(getParam('excl_b64'));
+            const exclFallback = exclNames.length ? [] : parseCSV(getParam('excl'));
+            const exclSet = new Set((exclNames.length ? exclNames : exclFallback).map(x => String(x)));
+
+            if (exclSet.size) {
+                OPTIONS.forEach(o => { if (exclSet.has(o.name)) state.selected.delete(o.id); });
+            }
+        }
+
+        function render() {
+            const q = state.query.trim().toLowerCase();
+            const filtered = q ? OPTIONS.filter(o => o.name.toLowerCase().includes(q)) : OPTIONS;
+
+            listEl.innerHTML = '';
+            if (!filtered.length) {
+                listEl.innerHTML = '<div class="empty">Ничего не найдено</div>';
+            } else {
+                const frag = document.createDocumentFragment();
+                filtered.forEach(o => {
+                    const row = document.createElement('div');
+                    row.className = 'item';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = state.selected.has(o.id);
+                    cb.addEventListener('change', () => {
+                        if (cb.checked) state.selected.add(o.id); else state.selected.delete(o.id);
+                        updateMainButton();
+                    });
+
+                    const label = document.createElement('label');
+                    label.textContent = o.name;
+                    label.style.cursor = 'pointer';
+                    label.addEventListener('click', () => { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); });
+
+                    const badge = document.createElement('span');
+                    badge.className = 'pill';
+                    badge.textContent = `#${o.id}`;
+
+                    row.appendChild(cb);
+                    row.appendChild(label);
+                    row.appendChild(badge);
+                    frag.appendChild(row);
+                });
+                listEl.appendChild(frag);
+            }
+            updateCounter();
+        }
+
+        function updateCounter() { counterEl.textContent = `Выбрано: ${state.selected.size}`; }
+
+        function updateMainButton() {
+            updateCounter();
+            if (!tg) return;
+            const n = state.selected.size;
+            tg.MainButton.setText(n ? `Отправить (${n})` : 'Отправить');
+            if (n) tg.MainButton.show(); else tg.MainButton.hide();
+        }
+
+        // Поиск
+        qEl.addEventListener('input', () => { state.query = qEl.value; render(); });
+
+        // Выбрать всё (видимое)
+        document.getElementById('selectAll').addEventListener('click', () => {
+            const q = state.query.trim().toLowerCase();
+            const filtered = q ? OPTIONS.filter(o => o.name.toLowerCase().includes(q)) : OPTIONS;
+            filtered.forEach(o => state.selected.add(o.id));
+            render();
+        });
+        document.getElementById('clearAll').addEventListener('click', () => { state.selected.clear(); render(); });
+
+        // Отправка
+        if (tg) {
+            tg.MainButton.setText('Отправить');
+            tg.MainButton.hide();
+            tg.onEvent('mainButtonClicked', () => {
+                const selected = OPTIONS.filter(o => state.selected.has(o.id)).map(o => ({ name: o.name, id: o.id }));
+                const payload = { type: 'checkbox_selection', selected };
+                try { tg.sendData(JSON.stringify(payload)); } catch (e) { console.error(e); }
+                tg.close();
+            });
+        }
+
+        // Запуск
+        initSelectionWithExclusions();
+        render();
+    </script>
+</body>
+
+</html>
