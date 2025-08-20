@@ -201,15 +201,25 @@
 
   // Отправка
   if (tg) {
-    tg.MainButton.setText('Отправить');
-    tg.MainButton.hide();
-    tg.onEvent('mainButtonClicked', () => {
-      const selected = OPTIONS.filter(o => state.selected.has(o.id)).map(o => ({ name: o.name, id: o.id }));
-      const payload = { type: 'checkbox_selection', selected };
-      try { tg.sendData(JSON.stringify(payload)); } catch (e) { console.error(e); }
-      tg.close();
-    });
-  }
+  tg.MainButton.setText('Отправить');
+  tg.MainButton.hide();
+  tg.onEvent('mainButtonClicked', () => {
+    // было: selected = все отмеченные
+    const selected = OPTIONS.filter(o => state.selected.has(o.id));
+
+    // НОВОЕ: считаем исключённые (те, что без галочки)
+    const excluded = OPTIONS
+      .filter(o => !state.selected.has(o.id))
+      .map(o => ({ name: o.name })); // достаточно имени
+
+    // если по какой-то причине исключённых нет, отправим пустой массив — это ок
+    const payload = { type: 'exclude_selection', excluded };
+
+    try { tg.sendData(JSON.stringify(payload)); } catch (e) {}
+    tg.close();
+  });
+}
+
 
   // Запуск
   initSelectionWithExclusions();
