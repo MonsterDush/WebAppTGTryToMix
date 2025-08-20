@@ -90,11 +90,17 @@
   function parseB64JsonArray(b64) {
     if (!b64) return [];
     try {
-      const json = atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+      // восстановить паддинг до кратности 4 и заменить urlsafe-символы
+      const fixed = b64.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = '='.repeat((4 - (fixed.length % 4)) % 4);
+      const json = atob(fixed + pad);
       const arr = JSON.parse(json);
       return Array.isArray(arr) ? arr : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   }
+
 
   // ========= ДАННЫЕ: динамически из URL =========
   // Поддерживаем два способа прокидывания списка производителей:
@@ -200,17 +206,19 @@
   document.getElementById('clearAll').addEventListener('click', () => { state.selected.clear(); render(); });
 
   // Отправка
-  if (tg) {
-    tg.MainButton.setText('Отправить');
-    tg.MainButton.hide();
-    tg.onEvent('mainButtonClicked', () => {
+  tg.onEvent('mainButtonClicked', () => {
     const excluded = OPTIONS
       .filter(o => !state.selected.has(o.id))
       .map(o => ({ name: o.name }));
-    tg.sendData(JSON.stringify({ type: 'exclude_selection', excluded }));
+    const payload = { type: 'exclude_selection', excluded };
+    try { tg.sendData(JSON.stringify(payload)); } catch (e) {}
     tg.close();
   });
+
+  });
   console.log("TG ready?", !!window.Telegram?.WebApp);
+  console.log("creators_b64 len:", (getParam('creators_b64')||'').length);
+  console.log("excl_b64 len:", (getParam('excl_b64')||'').length);
 
 }
 
