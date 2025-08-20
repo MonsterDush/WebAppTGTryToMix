@@ -23,11 +23,11 @@
     input[type="text"] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #2a2a2a; background: #121212; color: var(--text); }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
     button { cursor: pointer; border: 1px solid #2a2a2a; background: #121212; color: var(--text); padding: 10px 14px; border-radius: 12px; font-weight: 600; }
-    .list { margin-top: 16px; }
-    .item { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; }
+    .list { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px 16px; }
+    .item { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 12px; }
     .item:hover { background: rgba(255,255,255,.04); }
-    .pill { font-size: 12px; color: var(--muted); }
-    .empty { color: var(--muted); text-align: center; padding: 24px; }
+    .pill { font-size: 12px; color: var(--muted); justify-self: end; }
+    .empty { color: var(--muted); text-align: center; padding: 24px; grid-column: 1 / -1; }
     .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
     .sticky { position: sticky; top: 0; backdrop-filter: blur(6px); background: rgba(24,24,24,.9); padding: 8px 12px; border-radius: 12px; z-index: 10; }
   </style>
@@ -74,10 +74,12 @@
       try{
         const fixed = b64.replace(/-/g,'+').replace(/_/g,'/');
         const pad = '='.repeat((4 - (fixed.length % 4)) % 4);
-        const json = atob(fixed + pad);
+        const bin = atob(fixed + pad);
+        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        const json = new TextDecoder("utf-8").decode(bytes);
         const arr = JSON.parse(json);
         return Array.isArray(arr) ? arr : [];
-      }catch{ return []; }
+      }catch(e){ console.error("parseB64JsonArray error:", e); return []; }
     }
 
     // ====== ДАННЫЕ: бренды из URL или дефолт ======
@@ -117,8 +119,8 @@
           cb.addEventListener('change', ()=>{ if(cb.checked) state.selected.add(o.id); else state.selected.delete(o.id); updateMainButton(); });
           const label = document.createElement('label'); label.textContent = o.name; label.style.cursor = 'pointer';
           label.addEventListener('click', ()=>{ cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); });
-          const badge = document.createElement('span'); badge.className = 'pill'; badge.textContent = `#${o.id}`;
-          row.appendChild(cb); row.appendChild(label); row.appendChild(badge); frag.appendChild(row);
+          row.appendChild(cb); row.appendChild(label);
+          frag.appendChild(row);
         });
         listEl.appendChild(frag);
       }
