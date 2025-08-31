@@ -84,10 +84,18 @@
       const p = qs.get('p');
       if(!p) return null;
       try{
-        const pad = p.length % 4; const s = pad ? p + '='.repeat(4-pad) : p;
-        const json = atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+        // восстановим padding и вернём нормальный base64
+        const b64 = (p.length % 4 ? p + '='.repeat(4 - (p.length % 4)) : p)
+                      .replace(/-/g,'+').replace(/_/g,'/');
+        const bin = atob(b64); // бинарная строка
+        // ПРАВИЛЬНО: превращаем в байты и декодируем как UTF-8
+        const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+        const json  = new TextDecoder('utf-8').decode(bytes);
         return JSON.parse(json);
-      }catch(e){ return null; }
+      }catch(e){
+        console.error('prefill decode error', e);
+        return null;
+      }
     }
 
     function applyRefCatalogs(pref){
