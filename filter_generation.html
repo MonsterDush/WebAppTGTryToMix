@@ -1,39 +1,135 @@
 <!doctype html>
 <html lang="ru">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Фильтр-генерации — TryToMix</title>
   <style>
-    :root{
+    :root {
       /* Мягкая палитра под гайд */
       --bg: #FFF7F2;
-      --card:#FFFFFF;
-      --text:#1E1E1E;
-      --muted:#6B6B6B;
-      --accent:#006D77;
-      --ok:#2E7D32; --err:#C62828;
-      --br:16px; --pad:16px; --shadow:0 8px 24px rgba(0,0,0,.08);
+      --card: #FFFFFF;
+      --text: #1E1E1E;
+      --muted: #6B6B6B;
+      --accent: #006D77;
+      --ok: #2E7D32;
+      --err: #C62828;
+      --br: 16px;
+      --pad: 16px;
+      --shadow: 0 8px 24px rgba(0, 0, 0, .08);
     }
-    html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font:16px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;}
-    .wrap{max-width:720px; margin:0 auto; padding:24px;}
-    header{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
-    header img{width:36px; height:36px; object-fit:contain; border-radius:8px;}
-    h1{font-size:20px; margin:0;}
-    .card{background:var(--card); border-radius:var(--br); padding:var(--pad); box-shadow:var(--shadow); margin-bottom:16px;}
-    .sub{font-weight:600; margin:0 0 8px 0;}
-    .hint{font-size:13px; color:var(--muted); margin:4px 0 0 0;}
-    .row{display:flex; flex-wrap:wrap; gap:8px;}
-    .chip{border:1px solid #E8E8E8; padding:10px 12px; border-radius:12px; cursor:pointer; background:#fff; user-select:none;}
-    .chip.active{background:#C3CDE6; border-color:#C3CDE6;}
-    .chip.single.active{background:#F6D1D1;}
-    .actions{position:sticky; bottom:0; background:linear-gradient(180deg, rgba(255,247,242,0) 0%, var(--bg) 40%); padding:16px 0 8px;}
-    button{width:100%; padding:14px 16px; border:none; border-radius:14px; font-weight:700; cursor:pointer;}
-    .save{background:var(--accent); color:#fff;}
-    .save:disabled{opacity:.6; cursor:not-allowed;}
-    .err{color:var(--err); margin:8px 0 0;}
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    header img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--br);
+      padding: var(--pad);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .sub {
+      font-weight: 600;
+      margin: 0 0 8px 0;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 4px 0 0 0;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      border: 1px solid #E8E8E8;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      background: #fff;
+      user-select: none;
+    }
+
+    .chip.active {
+      background: #C3CDE6;
+      border-color: #C3CDE6;
+    }
+
+    .chip.single.active {
+      background: #F6D1D1;
+    }
+
+    .actions {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(255, 247, 242, 0) 0%, var(--bg) 40%);
+      padding: 16px 0 8px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .save {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .save:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .err {
+      color: var(--err);
+      margin: 8px 0 0;
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <header>
@@ -70,70 +166,70 @@
 
   <script>
     // --- Заглушки (заменяются из prefill.ref) ---
-    let CATEGORY_OPTIONS = ["Цитрус","Ягоды"];
-    let STRONG_OPTIONS   = ["Лёгкий","Средний","Крепкий"];
-    let TASTE_OPTIONS    = ["Сбалансированный"];
+    let CATEGORY_OPTIONS = ["Цитрус", "Ягоды"];
+    let STRONG_OPTIONS = ["Лёгкий", "Средний", "Крепкий"];
+    let TASTE_OPTIONS = ["Сбалансированный"];
 
     // Карты значений на клиенте (можно также передавать через ref.maps)
-    const STRONG_MAP = {"Без никотина":0.0,"Лёгкий":2.5,"Ниже среднего":3.5,"Средний":5.0,"Выше среднего":6.0,"Крепкий":7.5};
-    const TASTE_MAP  = {"Нейтральный":0.0,"Кислый":1.0,"Кисло-сладкий":1.5,"Сбалансированный":2.0,"Сладко-кислый":2.5,"Сладкий":3.0};
+    const STRONG_MAP = { "Без никотина": 0.0, "Лёгкий": 2.5, "Ниже среднего": 3.5, "Средний": 5.0, "Выше среднего": 6.0, "Крепкий": 7.5 };
+    const TASTE_MAP = { "Нейтральный": 0.0, "Кислый": 1.0, "Кисло-сладкий": 1.5, "Сбалансированный": 2.0, "Сладко-кислый": 2.5, "Сладкий": 3.0 };
 
     // --- helpers: prefill from ?p= ---
-    function getPrefill(){
+    function getPrefill() {
       const qs = new URLSearchParams(location.search);
       const p = qs.get('p');
-      if(!p) return null;
-      try{
+      if (!p) return null;
+      try {
         // восстановим padding и вернём нормальный base64
         const b64 = (p.length % 4 ? p + '='.repeat(4 - (p.length % 4)) : p)
-                      .replace(/-/g,'+').replace(/_/g,'/');
+          .replace(/-/g, '+').replace(/_/g, '/');
         const bin = atob(b64); // бинарная строка
         // ПРАВИЛЬНО: превращаем в байты и декодируем как UTF-8
         const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
-        const json  = new TextDecoder('utf-8').decode(bytes);
+        const json = new TextDecoder('utf-8').decode(bytes);
         return JSON.parse(json);
-      }catch(e){
+      } catch (e) {
         console.error('prefill decode error', e);
         return null;
       }
     }
 
-    function applyRefCatalogs(pref){
+    function applyRefCatalogs(pref) {
       const ref = pref?.ref || {};
       if (Array.isArray(ref.categories) && ref.categories.length) CATEGORY_OPTIONS = [...ref.categories];
-      if (Array.isArray(ref.strongs)   && ref.strongs.length)     STRONG_OPTIONS   = [...ref.strongs];
-      if (Array.isArray(ref.tastes)    && ref.tastes.length)      TASTE_OPTIONS    = [...ref.tastes];
+      if (Array.isArray(ref.strongs) && ref.strongs.length) STRONG_OPTIONS = [...ref.strongs];
+      if (Array.isArray(ref.tastes) && ref.tastes.length) TASTE_OPTIONS = [...ref.tastes];
       // Если пришли карты — тоже применим (опционально)
       if (ref.maps?.strong_map) Object.assign(STRONG_MAP, ref.maps.strong_map);
-      if (ref.maps?.taste_map)  Object.assign(TASTE_MAP,  ref.maps.taste_map);
+      if (ref.maps?.taste_map) Object.assign(TASTE_MAP, ref.maps.taste_map);
     }
 
     // --- chips renderers ---
-    function renderChips(list, container, {single=false, selectedSet, selectedValue, onToggle}){
-      container.innerHTML='';
+    function renderChips(list, container, { single = false, selectedSet, selectedValue, onToggle }) {
+      container.innerHTML = '';
       list.forEach(opt => {
         const val = typeof opt === 'string' ? opt : (opt.value ?? opt.title ?? String(opt));
         const lbl = typeof opt === 'string' ? opt : (opt.title ?? String(opt));
         const chip = document.createElement('div');
         chip.className = 'chip' + (single ? ' single' : '');
         chip.textContent = lbl;
-        const isActive = single ? (selectedValue===val) : selectedSet?.has?.(val);
-        if(isActive) chip.classList.add('active');
-        chip.onclick = ()=> onToggle(val, chip);
+        const isActive = single ? (selectedValue === val) : selectedSet?.has?.(val);
+        if (isActive) chip.classList.add('active');
+        chip.onclick = () => onToggle(val, chip);
         container.appendChild(chip);
       });
     }
 
     // Категории с индексом как значением
-    function renderCategoryChips(container, selectedSet, onToggle){
+    function renderCategoryChips(container, selectedSet, onToggle) {
       container.innerHTML = '';
       CATEGORY_OPTIONS.forEach((label, idx) => {
         const chip = document.createElement('div');
         chip.className = 'chip';
         chip.textContent = label;
         const isActive = selectedSet.has(idx);
-        if(isActive) chip.classList.add('active');
-        chip.onclick = ()=> onToggle(idx, chip);
+        if (isActive) chip.classList.add('active');
+        chip.onclick = () => onToggle(idx, chip);
         container.appendChild(chip);
       });
     }
@@ -142,97 +238,97 @@
     let selectedCats = new Set();   // индексы
     let excludedCats = new Set();   // индексы
     let selectedStrong = null;      // строка
-    let selectedTaste  = null;      // строка
+    let selectedTaste = null;      // строка
 
-    function validate(){
-      const a = (selectedCats.size>=1 && selectedCats.size<=2) && !!selectedStrong && !!selectedTaste;
-      const b = (selectedCats.size===0 && !selectedStrong && !selectedTaste && excludedCats.size>0);
+    function validate() {
+      const a = (selectedCats.size >= 1 && selectedCats.size <= 2) && !!selectedStrong && !!selectedTaste;
+      const b = (selectedCats.size === 0 && !selectedStrong && !selectedTaste && excludedCats.size > 0);
       return a || b;
     }
-    function updateSave(){
+    function updateSave() {
       const btn = document.getElementById('btnSave');
       btn.disabled = !validate();
       document.getElementById('err').textContent = btn.disabled ? 'Нужно заполнить 1–3 (или выбрать только исключения в пункте 4).' : '';
     }
 
-    function prefillFromData(rec){
-      if(!rec) return;
+    function prefillFromData(rec) {
+      if (!rec) return;
       // исключения — индексы
       const excl = rec.exclude_categories || [];
-      (excl||[]).forEach(i=>excludedCats.add(Number(i)));
+      (excl || []).forEach(i => excludedCats.add(Number(i)));
 
       // mix_filter: [strong_val, taste_val, [idx]] ИЛИ старый формат
       const mf = rec.mix_filter;
-      if(Array.isArray(mf) && mf.length===3){
+      if (Array.isArray(mf) && mf.length === 3) {
         const [s_val, t_val, c_idx] = mf;
         // восстановим строки для radio (по картам)
-        if (typeof s_val === 'number'){
-          selectedStrong = Object.keys(STRONG_MAP).find(k=>STRONG_MAP[k]===s_val) || null;
+        if (typeof s_val === 'number') {
+          selectedStrong = Object.keys(STRONG_MAP).find(k => STRONG_MAP[k] === s_val) || null;
         } else if (typeof s_val === 'string') {
           selectedStrong = s_val;
         }
-        if (typeof t_val === 'number'){
-          selectedTaste  = Object.keys(TASTE_MAP).find(k=>TASTE_MAP[k]===t_val) || null;
+        if (typeof t_val === 'number') {
+          selectedTaste = Object.keys(TASTE_MAP).find(k => TASTE_MAP[k] === t_val) || null;
         } else if (typeof t_val === 'string') {
-          selectedTaste  = t_val;
+          selectedTaste = t_val;
         }
-        (c_idx||[]).forEach(i=>selectedCats.add(Number(i)));
+        (c_idx || []).forEach(i => selectedCats.add(Number(i)));
       }
     }
 
-    function init(){
-      const tg = window.Telegram?.WebApp; if(tg) tg.expand();
+    function init() {
+      const tg = window.Telegram?.WebApp; if (tg) tg.expand();
       const pref = getPrefill();
       applyRefCatalogs(pref);
       prefillFromData(pref);
 
-      renderCategoryChips(document.getElementById('cats'), selectedCats, (idx, chip)=>{
-        if(selectedCats.has(idx)){ selectedCats.delete(idx); chip.classList.remove('active'); }
-        else { if(selectedCats.size>=2) return; selectedCats.add(idx); chip.classList.add('active'); }
+      renderCategoryChips(document.getElementById('cats'), selectedCats, (idx, chip) => {
+        if (selectedCats.has(idx)) { selectedCats.delete(idx); chip.classList.remove('active'); }
+        else { if (selectedCats.size >= 2) return; selectedCats.add(idx); chip.classList.add('active'); }
         updateSave();
       });
 
       renderChips(STRONG_OPTIONS, document.getElementById('strong'), {
-        single:true, selectedValue:selectedStrong,
-        onToggle:(val, chip)=>{
+        single: true, selectedValue: selectedStrong,
+        onToggle: (val, chip) => {
           const cont = document.getElementById('strong');
-          [...cont.children].forEach(el=>el.classList.remove('active'));
-          if(selectedStrong===val){ selectedStrong=null; chip.classList.remove('active'); }
-          else{ selectedStrong=val; chip.classList.add('active'); }
+          [...cont.children].forEach(el => el.classList.remove('active'));
+          if (selectedStrong === val) { selectedStrong = null; chip.classList.remove('active'); }
+          else { selectedStrong = val; chip.classList.add('active'); }
           updateSave();
         }
       });
 
       renderChips(TASTE_OPTIONS, document.getElementById('taste'), {
-        single:true, selectedValue:selectedTaste,
-        onToggle:(val, chip)=>{
+        single: true, selectedValue: selectedTaste,
+        onToggle: (val, chip) => {
           const cont = document.getElementById('taste');
-          [...cont.children].forEach(el=>el.classList.remove('active'));
-          if(selectedTaste===val){ selectedTaste=null; chip.classList.remove('active'); }
-          else{ selectedTaste=val; chip.classList.add('active'); }
+          [...cont.children].forEach(el => el.classList.remove('active'));
+          if (selectedTaste === val) { selectedTaste = null; chip.classList.remove('active'); }
+          else { selectedTaste = val; chip.classList.add('active'); }
           updateSave();
         }
       });
 
-      renderCategoryChips(document.getElementById('exclude'), excludedCats, (idx, chip)=>{
-        if(excludedCats.has(idx)){ excludedCats.delete(idx); chip.classList.remove('active'); }
+      renderCategoryChips(document.getElementById('exclude'), excludedCats, (idx, chip) => {
+        if (excludedCats.has(idx)) { excludedCats.delete(idx); chip.classList.remove('active'); }
         else { excludedCats.add(idx); chip.classList.add('active'); }
         updateSave();
       });
 
       updateSave();
 
-      document.getElementById('btnSave').onclick = ()=>{
-        const modeA = (selectedCats.size>=1 && selectedCats.size<=2) && !!selectedStrong && !!selectedTaste;
-        const cat_labels    = Array.from(selectedCats).map(i => CATEGORY_OPTIONS[i]);
-        const exclude_lbls  = Array.from(excludedCats).map(i => CATEGORY_OPTIONS[i]);
+      document.getElementById('btnSave').onclick = () => {
+        const modeA = (selectedCats.size >= 1 && selectedCats.size <= 2) && !!selectedStrong && !!selectedTaste;
+        const cat_labels = Array.from(selectedCats).map(i => CATEGORY_OPTIONS[i]);
+        const exclude_lbls = Array.from(excludedCats).map(i => CATEGORY_OPTIONS[i]);
         const payload = {
           type: 'mix_filter',
           categories_idx: modeA ? Array.from(selectedCats) : [],
-          strong_raw:     modeA ? selectedStrong : null,
-          strong_val:     modeA ? STRONG_MAP[selectedStrong] : null,
-          taste_raw:      modeA ? selectedTaste  : null,
-          taste_val:      modeA ? TASTE_MAP[selectedTaste]  : null,
+          strong_raw: modeA ? selectedStrong : null,
+          strong_val: modeA ? STRONG_MAP[selectedStrong] : null,
+          taste_raw: modeA ? selectedTaste : null,
+          taste_val: modeA ? TASTE_MAP[selectedTaste] : null,
           exclude_idx: Array.from(excludedCats),
           cat_labels: cat_labels,
           exclude_labels: exclude_lbls
@@ -245,4 +341,5 @@
     document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
+
 </html>
