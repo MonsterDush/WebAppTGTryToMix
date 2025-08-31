@@ -181,13 +181,26 @@
       if(!rec) return;
       const excl = rec.exclude_categories || [];
       (excl||[]).forEach(i=>excludedCats.add(Number(i)));
-
+    
       const mf = rec.mix_filter;
-      if(Array.isArray(mf) && mf.length===3){
-        const [s_val, t_val, c_idx] = mf;
-        selectedStrong = (typeof s_val === 'number') ? (Object.keys(STRONG_MAP).find(k=>STRONG_MAP[k]===s_val) || null) : (s_val||null);
-        selectedTaste  = (typeof t_val === 'number') ? (Object.keys(TASTE_MAP).find(k=>TASTE_MAP[k]===t_val)   || null) : (t_val||null);
-        (c_idx||[]).forEach(i=>selectedCats.add(Number(i)));
+      if (Array.isArray(mf) && mf.length >= 3){
+        // поддержка двух форматов:
+        // 1) [s_val, t_val, [idx...]]
+        // 2) [s_val, t_val, idx1, idx2?]
+        const s_val = mf[0], t_val = mf[1];
+        let idxs;
+        if (Array.isArray(mf[2])) idxs = mf[2];      // старый
+        else idxs = mf.slice(2);                     // новый плоский
+    
+        // восстановим подписи по картам
+        selectedStrong = (typeof s_val === 'number')
+          ? (Object.keys(STRONG_MAP).find(k=>STRONG_MAP[k]===s_val) || null)
+          : (s_val || null);
+        selectedTaste  = (typeof t_val === 'number')
+          ? (Object.keys(TASTE_MAP).find(k=>TASTE_MAP[k]===t_val)  || null)
+          : (t_val || null);
+    
+        (idxs||[]).forEach(i=>selectedCats.add(Number(i)));
       }
     }
 
