@@ -208,7 +208,6 @@
     function init(){
       const tg = tgInstance();
       if (tg) { try{ tg.ready(); }catch(_){} try{ tg.expand(); }catch(_){} }
-      showEnv(tg);
 
       const pref = getPrefill();
       applyRefCatalogs(pref || {});
