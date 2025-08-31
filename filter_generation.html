@@ -4,8 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Фильтр-генерации — TryToMix</title>
+  <!-- ОФИЦИАЛЬНАЯ БИБЛИОТЕКА TG WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{
+      /* Мягкая палитра */
       --bg:#FFF7F2; --card:#FFFFFF; --text:#1E1E1E; --muted:#6B6B6B;
       --accent:#006D77; --ok:#2E7D32; --err:#C62828;
       --br:16px; --pad:16px; --shadow:0 8px 24px rgba(0,0,0,.08);
@@ -28,12 +31,13 @@
     .save:disabled{opacity:.6; cursor:not-allowed;}
     .err{color:var(--err); margin:8px 0 0; white-space:pre-wrap;}
     .note{font-size:13px; color:var(--muted); margin-top:8px;}
+    #env{font-size:12px; color:var(--muted); margin-top:8px;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <img src="/Logo_TryToMix.png" alt="TryToMix">
+      <img src="Logo_TryToMix.png" alt="TryToMix">
       <h1>Фильтр-генерации</h1>
     </header>
 
@@ -62,6 +66,7 @@
     <div class="actions">
       <button id="btnSave" class="save" disabled>Сохранить</button>
       <div id="err" class="err"></div>
+      <div id="env"></div>
     </div>
   </div>
 
@@ -88,7 +93,7 @@
         return JSON.parse(json);
       }catch(e){
         console.error('prefill decode error', e);
-        showErr('Не удалось прочитать префилл (кодировка). Откройте форму заново из Telegram.');
+        showErr('Не удалось прочитать данные. Откройте форму заново из Telegram.');
         return null;
       }
     }
@@ -103,6 +108,29 @@
     }
 
     function showErr(msg){ const e=document.getElementById('err'); e.textContent = msg||''; }
+    function tgInstance() {
+      if (window.Telegram && window.Telegram.WebApp) return window.Telegram.WebApp;
+      if (window.parent && window.parent.Telegram && window.parent.Telegram.WebApp) return window.parent.Telegram.WebApp;
+      return null;
+    }
+    function isInsideTelegram(tg){
+      if (!tg) return false;
+      if (typeof tg.initData === 'string' && tg.initData.length) return true;
+      if (tg.platform && tg.platform.length) return true;
+      return typeof tg.sendData === 'function';
+    }
+    function showEnv(tg){
+      const el = document.getElementById('env');
+      if (!el) return;
+      const data = {
+        hasTelegram: !!window.Telegram,
+        hasWebApp: !!(window.Telegram && window.Telegram.WebApp),
+        platform: tg?.platform || null,
+        initDataLen: (typeof tg?.initData === 'string') ? tg.initData.length : null,
+        inIframe: window.top !== window.self
+      };
+      el.textContent = 'ENV: ' + JSON.stringify(data);
+    }
 
     // ----- компоненты -----
     function renderChips(list, container, {single=false, selectedSet, selectedValue, onToggle}){
@@ -119,7 +147,6 @@
         container.appendChild(chip);
       });
     }
-
     function renderCategoryChips(container, selectedSet, onToggle){
       container.innerHTML = '';
       CATEGORY_OPTIONS.forEach((label, idx) => {
@@ -150,7 +177,6 @@
       btn.disabled = !ok;
       showErr(ok ? '' : 'Нужно заполнить 1–3 (или выбрать только исключения в пункте 4).');
     }
-
     function prefillFromData(rec){
       if(!rec) return;
       const excl = rec.exclude_categories || [];
@@ -167,8 +193,9 @@
 
     // ----- init -----
     function init(){
-      const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-      if (tg) { try { tg.ready(); tg.expand(); } catch(_){} }
+      const tg = tgInstance();
+      if (tg) { try{ tg.ready(); }catch(_){} try{ tg.expand(); }catch(_){} }
+      showEnv(tg);
 
       const pref = getPrefill();
       applyRefCatalogs(pref || {});
@@ -215,8 +242,9 @@
           showErr('Заполни 1–3 или выбери только исключения (4).');
           return;
         }
-        if (!tg){
-          showErr('Откройте форму внутри Telegram, чтобы отправить данные.');
+        const _tg = tgInstance();
+        if (!_tg){
+          showErr('Похоже, страница открыта не как Telegram WebApp. Открой через кнопку в боте.');
           return;
         }
 
@@ -230,13 +258,12 @@
           taste_val:      modeA ? TASTE_MAP[selectedTaste]  : null,
           exclude_idx: Array.from(excludedCats),
           cat_labels: Array.from(selectedCats).map(i => CATEGORY_OPTIONS[i]),
-          exclude_labels: Array.from(excludedCats).map(i => CATEGORY_OPTIONS[i])
+          exclude_labels: Array.from(excludedCats).map(i => CATEGORY_OPTIONS[i]),
         };
 
         try {
-          tg.sendData(JSON.stringify(payload));
-          // небольшая задержка — на некоторых клиентах помогает
-          setTimeout(()=> tg.close(), 100);
+          _tg.sendData(JSON.stringify(payload));
+          setTimeout(()=>{ try{ _tg.close(); }catch(_){} }, 100);
         } catch (e){
           console.error('sendData error', e);
           showErr('Ошибка отправки в Telegram: ' + (e?.message || e));
