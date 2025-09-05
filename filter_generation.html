@@ -168,7 +168,7 @@
 
     function validate(){
       const a = (selectedCats.size>=1 && selectedCats.size<=2) && !!selectedStrong && !!selectedTaste;
-      const b = (selectedCats.size===0 && !selectedStrong && !selectedTaste && excludedCats.size>0);
+      const b = (selectedCats.size===0 && !selectedStrong && !selectedTaste && excludedCats.size>=0);
       return a || b;
     }
     function updateSave(){
